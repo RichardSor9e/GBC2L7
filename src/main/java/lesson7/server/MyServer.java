@@ -4,6 +4,7 @@ import lesson7.server.authentication.AuthenticationService;
 import lesson7.server.authentication.BaseAuthenticationService;
 import lesson7.server.handler.ClientHandler;
 
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -15,6 +16,7 @@ public class MyServer {
     private final ServerSocket serverSocket;
     private final AuthenticationService authenticationService;
     private final List<ClientHandler> clients;
+    private ArrayList <String> usersOnline;
 
 
 
@@ -23,6 +25,11 @@ public class MyServer {
         authenticationService = new BaseAuthenticationService();
         clients = new ArrayList<>();
 
+    }
+    public String getUsersOnline() {
+
+        String listString = String.join(" ", usersOnline);
+        return listString;
     }
 
 
@@ -57,13 +64,26 @@ public class MyServer {
         handler.handle();
     }
 
-    public synchronized void subscribe(ClientHandler clientHandler) {
+    public synchronized void subscribe(ClientHandler clientHandler) throws IOException {
         clients.add(clientHandler);
+
+
+
+        for (ClientHandler a : clients) {
+
+           a.refreshNameList(clients);
+        }
+
 
     }
 
-    public synchronized void unSubscribe(ClientHandler clientHandler) {
+    public synchronized void unSubscribe(ClientHandler clientHandler) throws IOException {
         clients.remove(clientHandler);
+
+      for (ClientHandler a : clients) {
+
+           a.refreshNameList(clients);
+        }
     }
 
     public synchronized boolean isUsernameBusy(String username) {
