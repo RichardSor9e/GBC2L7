@@ -8,6 +8,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.sql.SQLException;
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClientHandler {
     private static final String AUTH_CMD_PREFIX = "/auth"; // + login + password
@@ -18,6 +22,8 @@ public class ClientHandler {
     private static final String PRIVATE_MSG_CMD_PREFIX = "/w"; // + msg
     private static final String STOP_SERVER_CMD_PREFIX = "/stop";
     private static final String END_CLIENT_CMD_PREFIX = "/end";
+    private static final String REFRESH_CLIENT_LIST = "/ref";
+
 
     private MyServer myServer;
     private Socket clientSocket;
@@ -49,27 +55,32 @@ public class ClientHandler {
         System.out.println(address);
 
 
+
         new Thread(() -> {
             try {
                 authentication();
 
                 readMessage();
-            } catch (IOException e) {
+            } catch (IOException | SQLException e) {
                 e.printStackTrace();
+                try {
+                    myServer.unSubscribe(this);
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+                System.out.println(DateFormat.getInstance() + "Client " + this.getUsername() + " has left");
             }
         }).start();
     }
 
-    private void authentication() throws IOException {
+    private void authentication() throws IOException, SQLException {
         while (true) {
             String message = in.readUTF();
             if (message.startsWith(AUTH_CMD_PREFIX)) {
                 boolean isSuccessAuth = processAuthentication(message);
                 if (isSuccessAuth) {
-                    online = true;
                     break;
                 }
-
             } else {
                 out.writeUTF(AUTHERR_CMD_PREFIX + " Ошибка аутентификации");
                 System.out.println("Неудачная попытка аутентификации");
@@ -79,7 +90,7 @@ public class ClientHandler {
 
 
 
-    private boolean processAuthentication(String message) throws IOException {
+    private boolean processAuthentication(String message) throws IOException, SQLException {
         String[] parts = message.split("\\s+");
         if (parts.length != 3) {
             out.writeUTF(AUTHERR_CMD_PREFIX + " Ошибка аутентификации");
@@ -90,6 +101,8 @@ public class ClientHandler {
         AuthenticationService auth = myServer.getAuthenticationService();
 
         username = auth.getUsernameByLoginAndPassword(login, password);
+
+        System.out.println(username);
 
         if (username != null) {
             if (myServer.isUsernameBusy(username)) {
@@ -109,7 +122,6 @@ public class ClientHandler {
 
     private void readMessage() throws IOException {
 
-
         while (true) {
             String message = in.readUTF();
             System.out.println("message | " + username + ": " + message);
@@ -119,7 +131,7 @@ public class ClientHandler {
                 return;
             } else if (message.startsWith(PRIVATE_MSG_CMD_PREFIX)) {
 
-String[] dividedMessage = message.split(" ", 3);
+String[] dividedMessage = message.split("\\s+", 3);
 
                 myServer.sendPrivatMessage(dividedMessage[1], dividedMessage[2], this);
 
@@ -137,4 +149,18 @@ String[] dividedMessage = message.split(" ", 3);
     public String getUsername() {
         return username;
     }
+
+
+    public void refreshNameList (List<ClientHandler> a) throws IOException {
+
+String msg = String.format("%s %s" ,REFRESH_CLIENT_LIST, a.toString());
+        System.out.println(msg);
+        out.writeUTF(msg);
+    }
+
+    public String toString () {
+        return username;
+    }
 }
+
+
