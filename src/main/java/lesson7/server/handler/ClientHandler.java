@@ -8,6 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +61,7 @@ public class ClientHandler {
                 authentication();
 
                 readMessage();
-            } catch (IOException e) {
+            } catch (IOException | SQLException e) {
                 e.printStackTrace();
                 try {
                     myServer.unSubscribe(this);
@@ -72,7 +73,7 @@ public class ClientHandler {
         }).start();
     }
 
-    private void authentication() throws IOException {
+    private void authentication() throws IOException, SQLException {
         while (true) {
             String message = in.readUTF();
             if (message.startsWith(AUTH_CMD_PREFIX)) {
@@ -89,7 +90,7 @@ public class ClientHandler {
 
 
 
-    private boolean processAuthentication(String message) throws IOException {
+    private boolean processAuthentication(String message) throws IOException, SQLException {
         String[] parts = message.split("\\s+");
         if (parts.length != 3) {
             out.writeUTF(AUTHERR_CMD_PREFIX + " Ошибка аутентификации");
@@ -100,6 +101,8 @@ public class ClientHandler {
         AuthenticationService auth = myServer.getAuthenticationService();
 
         username = auth.getUsernameByLoginAndPassword(login, password);
+
+        System.out.println(username);
 
         if (username != null) {
             if (myServer.isUsernameBusy(username)) {

@@ -2,12 +2,14 @@ package lesson7.server;
 
 import lesson7.server.authentication.AuthenticationService;
 import lesson7.server.authentication.BaseAuthenticationService;
+import lesson7.server.authentication.DBAuthenticationService;
 import lesson7.server.handler.ClientHandler;
 
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +24,7 @@ public class MyServer {
 
     public MyServer(int port) throws IOException {
         serverSocket = new ServerSocket(port);
-        authenticationService = new BaseAuthenticationService();
+        authenticationService = new DBAuthenticationService();
         clients = new ArrayList<>();
 
     }
@@ -37,6 +39,7 @@ public class MyServer {
         System.out.println("СЕРВЕР ЗАПУЩЕН!");
         System.out.println("----------------");
 
+connectionWithDB();
 
         try {
             while(true) {
@@ -46,7 +49,15 @@ public class MyServer {
             e.printStackTrace();
         }
 
+    }
 
+    private void connectionWithDB() {
+        DBAuthenticationService as = new DBAuthenticationService();
+        try {
+            as.connection();
+        } catch (ClassNotFoundException | SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     private void waitAndProcessNewClientConnection() throws IOException {
