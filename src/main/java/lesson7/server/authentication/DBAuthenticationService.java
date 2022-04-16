@@ -16,7 +16,7 @@ public class DBAuthenticationService implements AuthenticationService{
         String un = rs.getString("username");
 
         System.out.printf("User name: %7s", un );
-
+        System.out.println(un);
         return un;
     }
 

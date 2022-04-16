@@ -6,6 +6,7 @@ import lesson7.server.authentication.AuthenticationService;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.sql.SQLException;
@@ -17,6 +18,7 @@ public class ClientHandler {
     private static final String AUTH_CMD_PREFIX = "/auth"; // + login + password
     private static final String AUTHOK_CMD_PREFIX = "/authok"; // + username
     private static final String AUTHERR_CMD_PREFIX = "/autherr"; // + error message
+    private static final String CHAT_HISTORY = "/ch"; // + msg
     private static final String CLIENT_MSG_CMD_PREFIX = "/cMsg"; // + msg
     private static final String SERVER_MSG_CMD_PREFIX = "/sMsg"; // + msg
     private static final String PRIVATE_MSG_CMD_PREFIX = "/w"; // + msg
@@ -32,6 +34,8 @@ public class ClientHandler {
     private String username;
     private DataOutputStream privatOut;
     private boolean online = false;
+    private ChatHistory chatHistory = new ChatHistory();
+
 
 
 
@@ -102,7 +106,6 @@ public class ClientHandler {
 
         username = auth.getUsernameByLoginAndPassword(login, password);
 
-        System.out.println(username);
 
         if (username != null) {
             if (myServer.isUsernameBusy(username)) {
@@ -112,7 +115,9 @@ public class ClientHandler {
 
             out.writeUTF(AUTHOK_CMD_PREFIX + " " + username);
             myServer.subscribe(this);
+            ChatHistory.sendFirst100Message(this);
             System.out.println("Пользователь " + username + " подключился к чату");
+
             return true;
         } else {
             out.writeUTF(AUTHERR_CMD_PREFIX + " Логин или пароль не соответствуют действительности");
@@ -122,9 +127,11 @@ public class ClientHandler {
 
     private void readMessage() throws IOException {
 
+        ChatHistory ch = new ChatHistory();
+        ch.readMessageFromChatHistoryFile(this);
         while (true) {
             String message = in.readUTF();
-            System.out.println("message | " + username + ": " + message);
+            System.out.println("message from " + username + ": " + message);
             if (message.startsWith(STOP_SERVER_CMD_PREFIX)) {
                 System.exit(0);
             } else if (message.startsWith(END_CLIENT_CMD_PREFIX)) {
@@ -135,7 +142,18 @@ String[] dividedMessage = message.split("\\s+", 3);
 
                 myServer.sendPrivatMessage(dividedMessage[1], dividedMessage[2], this);
 
-            } else  {
+            } else
+
+            {
+               new Thread (() -> {
+                   try {
+                      chatHistory.addMessageToChatHistory(message, this);
+
+                   } catch (IOException e) {
+                       e.printStackTrace();
+                   }
+               }).start();
+
                 myServer.broadcastMessage(message, this);
             }
         }
@@ -144,6 +162,16 @@ String[] dividedMessage = message.split("\\s+", 3);
 
     public void sendMessage(String sender, String message) throws IOException {
         out.writeUTF(String.format("%s %s %s", CLIENT_MSG_CMD_PREFIX, sender, message));
+
+    }
+    public void sendFirst100Message (ArrayList<String> a) throws IOException {
+
+        for (int i = 0; i < a.toArray().length; i++) {
+           out.writeUTF(CHAT_HISTORY + a.get(i));
+            System.out.println(CHAT_HISTORY + a.get(i));
+
+        }
+
     }
 
     public String getUsername() {
