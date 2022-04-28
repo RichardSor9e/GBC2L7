@@ -7,7 +7,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="GBC2L7" />
+        <module name="GBC3L6" />
         <module name="java2_090222" />
       </profile>
     </annotationProcessing>

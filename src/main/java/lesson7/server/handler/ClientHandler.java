@@ -2,6 +2,7 @@ package lesson7.server.handler;
 
 import lesson7.server.MyServer;
 import lesson7.server.authentication.AuthenticationService;
+import lesson7.server.logger.ChatLogger;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -13,6 +14,8 @@ import java.sql.SQLException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.*;
 
 public class ClientHandler {
     private static final String AUTH_CMD_PREFIX = "/auth"; // + login + password
@@ -35,12 +38,12 @@ public class ClientHandler {
     private DataOutputStream privatOut;
     private boolean online = false;
     private ChatHistory chatHistory = new ChatHistory();
+    private static Logger thisLogger = MyServer.thisLogger;
+    private static Handler LoggerHandler = MyServer.LoggerHandler;
+    private static ReentrantReadWriteLock reentrantReadWriteLock = MyServer.reentrantReadWriteLock;
 
 
-
-
-
-    public ClientHandler(MyServer myServer, Socket socket) {
+    public ClientHandler(MyServer myServer, Socket socket) throws IOException {
 
         this.myServer = myServer;
         clientSocket = socket;
@@ -72,7 +75,11 @@ public class ClientHandler {
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
-                System.out.println(DateFormat.getInstance() + "Client " + this.getUsername() + " has left");
+                reentrantReadWriteLock.writeLock().lock();
+                thisLogger.log(Level.INFO, DateFormat.getInstance() + "Client " + this.getUsername() + " has left");
+                reentrantReadWriteLock.writeLock().unlock();
+//                logger.sentLoggerToHistory("INFO", DateFormat.getInstance() + "Client " + this.getUsername() + " has left");
+
             }
         }).start();
     }
@@ -86,8 +93,12 @@ public class ClientHandler {
                     break;
                 }
             } else {
+
+                reentrantReadWriteLock.writeLock().lock();
+                thisLogger.log(Level.WARNING, this.username + "Неудачная попытка аутентификации");
+                reentrantReadWriteLock.writeLock().unlock();
                 out.writeUTF(AUTHERR_CMD_PREFIX + " Ошибка аутентификации");
-                System.out.println("Неудачная попытка аутентификации");
+
             }
         }
     }

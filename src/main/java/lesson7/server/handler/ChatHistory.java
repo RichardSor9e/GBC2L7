@@ -1,11 +1,17 @@
 package lesson7.server.handler;
 
+import lesson7.server.MyServer;
+import lesson7.server.logger.ChatLogger;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.*;
 
 
 public  class  ChatHistory {
@@ -15,6 +21,13 @@ public  class  ChatHistory {
     private transient RandomAccessFile randomAccessFile;
     private transient static int counter = 0;
     private static ArrayList<String> messageClientList = new ArrayList<>();
+    private static Logger thisLogger = MyServer.thisLogger;
+    private static Handler LoggerHandler = MyServer.LoggerHandler;
+    private static ReentrantReadWriteLock reentrantReadWriteLock = MyServer.reentrantReadWriteLock;
+
+    public ChatHistory() throws IOException {
+
+    }
 
 
     public ArrayList<String> addMessageToChatHistory(String message, ClientHandler client) throws IOException {
@@ -22,8 +35,6 @@ public  class  ChatHistory {
 
         Date dateNow = new Date();
         SimpleDateFormat formatForDateNow = new SimpleDateFormat("[MM.dd hh:mm]");
-
-        System.out.println(formatForDateNow.format(dateNow));
 
 
         String preparedMessage = formatForDateNow.format(dateNow) + " " + client.getUsername() + ": " +
@@ -46,8 +57,11 @@ public  class  ChatHistory {
         pw.println(preparedMessage);
 
         pw.close();
+        reentrantReadWriteLock.writeLock().lock();
+        thisLogger.log(Level.INFO, "Сообщение ушло в историю сообщений: " + preparedMessage);
+        reentrantReadWriteLock.writeLock().unlock();
+//        logger.sentLoggerToHistory("INFO", "Сообщение ушло в историю сообщений: " + preparedMessage);
 
-        System.out.println("Сообщение ушло в историю сообщений: " + preparedMessage);
 
 return messageClientList;
 

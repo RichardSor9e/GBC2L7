@@ -1,9 +1,9 @@
 package lesson7.server;
 
 import lesson7.server.authentication.AuthenticationService;
-import lesson7.server.authentication.BaseAuthenticationService;
 import lesson7.server.authentication.DBAuthenticationService;
 import lesson7.server.handler.ClientHandler;
+import lesson7.server.logger.ChatLogger;
 
 
 import java.io.IOException;
@@ -12,6 +12,8 @@ import java.net.Socket;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.*;
 
 public class MyServer {
 
@@ -19,13 +21,26 @@ public class MyServer {
     private final AuthenticationService authenticationService;
     private final List<ClientHandler> clients;
     private ArrayList <String> usersOnline;
+    public static Logger thisLogger = Logger.getLogger("Запуск сервера");
+    public static Handler LoggerHandler;
+    public static ReentrantReadWriteLock reentrantReadWriteLock = new ReentrantReadWriteLock(true);
 
+    static {
+        try {
+            LoggerHandler = new FileHandler("src/main/resources/lib/loggerHistory.log");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     public MyServer(int port) throws IOException {
         serverSocket = new ServerSocket(port);
         authenticationService = new DBAuthenticationService();
         clients = new ArrayList<>();
+        thisLogger.addHandler(LoggerHandler);
+        LoggerHandler.setFormatter(new SimpleFormatter());
+
 
     }
     public String getUsersOnline() {
@@ -36,9 +51,9 @@ public class MyServer {
 
 
     public void start() {
-        System.out.println("СЕРВЕР ЗАПУЩЕН!");
-        System.out.println("----------------");
-
+ reentrantReadWriteLock.writeLock().lock();
+        thisLogger.log(Level.INFO, "Сервер успешно запущен!");
+        reentrantReadWriteLock.writeLock().unlock();
 connectionWithDB();
 
         try {
@@ -61,11 +76,18 @@ connectionWithDB();
     }
 
     private void waitAndProcessNewClientConnection() throws IOException {
-        System.out.println("Ожидание клиента...");
+//        logger.sentLoggerToHistory("INFO", "Ожидание клиента...");
+        reentrantReadWriteLock.writeLock().lock();
+        thisLogger.log(Level.INFO, "Ожидание клиента...");
+        reentrantReadWriteLock.writeLock().unlock();
+        connectionWithDB();
         Socket socket = serverSocket.accept();
 
-
-        System.out.println("Клиент подключился!");
+        reentrantReadWriteLock.writeLock().lock();
+        thisLogger.log(Level.INFO, "Клиент подключился.");
+        reentrantReadWriteLock.writeLock().unlock();
+//        logger.sentLoggerToHistory("INFO", "Клиент подключился.");
+        connectionWithDB();
 
         processClientConnection(socket);
     }
@@ -125,12 +147,15 @@ connectionWithDB();
         for (ClientHandler client : clients) {
 
             if (client.getUsername().equals(accepter)) {
-                System.out.println("ok");
 
                 client.sendMessage(sender.getUsername(), message);
-
-                System.out.println(sender.getUsername() + " sent a message to " + accepter);
-
+//
+//                System.out.println(sender.getUsername() + " sent a message to " + accepter);
+//                logger.sentLoggerToHistory("INFO", sender.getUsername() + " sent a message to " + accepter);
+                reentrantReadWriteLock.writeLock().lock();
+                thisLogger.log(Level.INFO, sender.getUsername() + " sent a message to " + accepter);
+                reentrantReadWriteLock.writeLock().unlock();
+                connectionWithDB();
             } }
 
     }
